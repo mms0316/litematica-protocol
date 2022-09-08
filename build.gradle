@@ -1,0 +1,54 @@
+plugins {
+    id 'fabric-loom' version '1.0-SNAPSHOT'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+archivesBaseName = project.projectName
+version = project.modVersion + '+' + project.minecraftVersion
+group = project.mavenGroup
+
+repositories {
+    maven {
+        url "https://www.cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+    maven {
+        url "https://repo.papermc.io/repository/maven-public/"
+    }
+    maven {
+        url "https://maven.enginehub.org/repo/"
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraftVersion}"
+    mappings "net.fabricmc:yarn:${project.yarnMappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loaderVersion}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabricVersion}"
+    modCompileOnly "curse.maven:litematica-308892:${litematicaFileId}"
+    compileOnly "io.papermc.paper:paper-api:${project.paperVersion}"
+    compileOnly "com.sk89q.worldedit:worldedit-bukkit:${worldeditVersion}"
+}
+
+processResources {
+    filesMatching(["fabric.mod.json", "plugin.yml"]) {
+        expand project.properties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 17
+}
+
+jar {
+    from("LICENSE.md") {
+        rename {
+            "LICENSE_${project.name}"
+        }
+    }
+}

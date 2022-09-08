@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "${name}",
+  "version": "${version}",
+  "name": "Litematica Protocol",
+  "description": "${description}",
+  "authors": [
+    "dlee13"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/litematica-protocol",
+    "sources": "https://github.com/dlee13/litematica-protocol",
+    "issues": "https://github.com/dlee13/litematica-protocol/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/litematicaprotocol/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod"
+    ]
+  },
+  "mixins": [
+    "litematicaprotocol.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loaderVersion}",
+    "fabric": "*",
+    "minecraft": ">=1.19",
+    "java": ">=17",
+    "litematica": "*"
+  }
+}
