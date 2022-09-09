@@ -48,7 +48,7 @@ abstract class SchematicPlacementManagerMixin {
 
     // https://github.com/SpongePowered/Schematic-Specification/blob/master/versions/schematic-2.md
     private static NbtCompound convertSchematic(final LitematicaSchematic schematic, final String regionName) {
-        if (schematic == null || regionName == null) {
+        if (schematic == null || regionName == null || schematic.getSubRegionContainer(regionName) == null) {
             return null;
         }
         final var nbt = new NbtCompound();
