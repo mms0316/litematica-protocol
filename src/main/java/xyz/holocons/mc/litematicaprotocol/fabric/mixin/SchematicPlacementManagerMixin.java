@@ -31,6 +31,8 @@ import xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod;
 @Mixin(value = SchematicPlacementManager.class, remap = false)
 abstract class SchematicPlacementManagerMixin {
 
+    private static final int MAX_PAYLOAD_LENGTH = 32767;
+
     @Inject(method = "pastePlacementToWorld", at = @At("HEAD"), cancellable = true)
     private void injectProtocol(final SchematicPlacement placement, MinecraftClient client, CallbackInfo info) {
         if (!LitematicaProtocolMod.isProtocolAvailable() || client.isIntegratedServerRunning()) {
@@ -43,7 +45,12 @@ abstract class SchematicPlacementManagerMixin {
         final var regionName = placement.getSubRegionCount() == 1
                 ? placement.getAllSubRegionsPlacements().iterator().next().getName()
                 : placement.getSelectedSubRegionName();
-        sendSchematic(convertSchematic(placement.getSchematic(), regionName), client);
+        final var schematic = convertSchematic(placement.getSchematic(), regionName);
+        try {
+            sendSchematic(schematic);
+        } catch (IOException e) {
+            client.inGameHud.getChatHud().addMessage(Text.of(e.getMessage()));
+        }
     }
 
     // https://github.com/SpongePowered/Schematic-Specification/blob/master/versions/schematic-2.md
@@ -136,16 +143,16 @@ abstract class SchematicPlacementManagerMixin {
                 .collect(Collectors.toCollection(NbtList::new));
     }
 
-    private static void sendSchematic(final NbtCompound nbt, final MinecraftClient client) {
+    private static void sendSchematic(final NbtCompound nbt) throws IOException {
         if (nbt == null || nbt.isEmpty()) {
-            client.inGameHud.getChatHud().addMessage(Text.of("No schematic is selected"));
-            return;
+            throw new IOException("No schematic is selected");
         }
         final var message = new PacketByteBuf(Unpooled.buffer());
-        try (final var out = new ByteBufOutputStream(message)) {
-            out.writeUTF(Constants.SPONGE_SCHEMATIC);
-            NbtIo.writeCompressed(nbt, out);
-        } catch (IOException e) {
+        final var out = new ByteBufOutputStream(message);
+        out.writeUTF(Constants.SPONGE_SCHEMATIC);
+        NbtIo.writeCompressed(nbt, out);
+        if (out.writtenBytes() > MAX_PAYLOAD_LENGTH) {
+            throw new IOException("Schematic is too large");
         }
         ClientPlayNetworking.send(LitematicaProtocolMod.CHANNEL_MAIN, message);
     }
