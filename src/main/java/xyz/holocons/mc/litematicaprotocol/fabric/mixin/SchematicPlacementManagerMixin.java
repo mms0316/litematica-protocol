@@ -41,7 +41,7 @@ abstract class SchematicPlacementManagerMixin {
             return;
         }
         final var regionName = placement.getSubRegionCount() == 1
-                ? placement.getName()
+                ? placement.getAllSubRegionsPlacements().iterator().next().getName()
                 : placement.getSelectedSubRegionName();
         sendSchematic(convertSchematic(placement.getSchematic(), regionName), client);
     }
