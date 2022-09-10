@@ -14,11 +14,13 @@ import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.util.EntityUtils;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.nbt.NbtByteArray;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtDouble;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
@@ -118,7 +120,11 @@ abstract class SchematicPlacementManagerMixin {
         return schematic.getBlockEntityMapForRegion(regionName).values().stream()
                 .map(blockEntity -> {
                     final var nbt = blockEntity.copy();
-                    final var position = IntList.of(nbt.getInt("x"), nbt.getInt("y"), nbt.getInt("z"));
+                    final var position = IntList
+                            .of(nbt.getInt("x"),
+                                    nbt.getInt("y"),
+                                    nbt.getInt("z"))
+                            .toIntArray();
                     final var id = nbt.getString("id");
                     nbt.remove("x");
                     nbt.remove("y");
@@ -132,11 +138,20 @@ abstract class SchematicPlacementManagerMixin {
     }
 
     private static NbtList getEntities(final LitematicaSchematic schematic, final String regionName) {
+        final var positionOffset = schematic.getSubRegionPosition(regionName);
         return schematic.getEntityListForRegion(regionName).stream()
                 .map(entity -> {
                     final var nbt = entity.nbt.copy();
+                    final var position = DoubleList
+                            .of(entity.posVec.x + positionOffset.getX(),
+                                    entity.posVec.y + positionOffset.getY(),
+                                    entity.posVec.z + positionOffset.getZ())
+                            .doubleStream()
+                            .mapToObj(NbtDouble::of)
+                            .collect(Collectors.toCollection(NbtList::new));
                     final var id = nbt.getString("id");
                     nbt.remove("id");
+                    nbt.put("Pos", position);
                     nbt.putString("Id", id);
                     return nbt;
                 })
