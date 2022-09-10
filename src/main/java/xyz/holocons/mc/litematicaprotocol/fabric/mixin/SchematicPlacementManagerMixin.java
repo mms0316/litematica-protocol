@@ -164,7 +164,7 @@ abstract class SchematicPlacementManagerMixin {
         if (nbt == null || nbt.isEmpty()) {
             throw new IOException("No schematic is selected");
         }
-        final var message = new PacketByteBuf(Unpooled.buffer());
+        final var message = new PacketByteBuf(Unpooled.buffer(4096));
         final var out = new ByteBufOutputStream(message);
         out.writeUTF(Constants.SPONGE_SCHEMATIC);
         NbtIo.writeCompressed(nbt, out);
