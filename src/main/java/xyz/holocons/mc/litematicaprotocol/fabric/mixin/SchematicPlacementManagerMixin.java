@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
+import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.util.EntityUtils;
@@ -21,7 +22,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.nbt.NbtByteArray;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtDouble;
-import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
@@ -81,11 +81,13 @@ abstract class SchematicPlacementManagerMixin {
     }
 
     private static NbtCompound getPalette(final LitematicaSchematic schematic, final String regionName) {
-        final var palette = schematic.getSubRegionContainer(regionName).getPalette().writeToNBT();
         final var nbt = new NbtCompound();
-        for (int i = 0; i < palette.size(); i++) {
+        final var palette = schematic.getSubRegionContainer(regionName).getPalette();
+        for (int i = 0; i < palette.getPaletteSize(); i++) {
             final var stringBuilder = new StringBuilder();
-            final var blockState = NbtHelper.toBlockState(palette.getCompound(i));
+            final var blockState = palette.getBlockState(i) != null
+                    ? palette.getBlockState(i)
+                    : LitematicaBlockStateContainer.AIR_BLOCK_STATE;
             final var properties = blockState.getEntries().entrySet().iterator();
             stringBuilder.append(Registry.BLOCK.getId(blockState.getBlock()));
             if (properties.hasNext()) {
