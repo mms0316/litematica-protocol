@@ -16,7 +16,6 @@ import fi.dy.masa.litematica.util.EntityUtils;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.nbt.NbtByteArray;
@@ -122,11 +121,11 @@ abstract class SchematicPlacementManagerMixin {
         return schematic.getBlockEntityMapForRegion(regionName).values().stream()
                 .map(blockEntity -> {
                     final var nbt = blockEntity.copy();
-                    final var position = IntList
-                            .of(nbt.getInt("x"),
-                                    nbt.getInt("y"),
-                                    nbt.getInt("z"))
-                            .toIntArray();
+                    final var position = new int[] {
+                            nbt.getInt("x"),
+                            nbt.getInt("y"),
+                            nbt.getInt("z")
+                    };
                     final var id = nbt.getString("id");
                     nbt.remove("x");
                     nbt.remove("y");
