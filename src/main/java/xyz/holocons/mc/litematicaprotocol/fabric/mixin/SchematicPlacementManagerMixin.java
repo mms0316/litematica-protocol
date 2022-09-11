@@ -143,10 +143,10 @@ abstract class SchematicPlacementManagerMixin {
         return schematic.getEntityListForRegion(regionName).stream()
                 .map(entity -> {
                     final var nbt = entity.nbt.copy();
-                    final var position = DoubleList
-                            .of(entity.posVec.x + positionOffset.getX(),
-                                    entity.posVec.y + positionOffset.getY(),
-                                    entity.posVec.z + positionOffset.getZ())
+                    final var position = DoubleList.of(
+                            entity.posVec.x + positionOffset.getX(),
+                            entity.posVec.y + positionOffset.getY(),
+                            entity.posVec.z + positionOffset.getZ())
                             .doubleStream()
                             .mapToObj(NbtDouble::of)
                             .collect(Collectors.toCollection(NbtList::new));

@@ -52,11 +52,10 @@ public final class LitematicaProtocolPlugin extends JavaPlugin implements Plugin
             player.sendMessage("Failed to read schematic");
             return;
         }
-        if (clipboard == null) {
-            return;
+        if (clipboard != null) {
+            WorldEdit.getInstance().getSessionManager().get(BukkitAdapter.adapt(player))
+                    .setClipboard(new ClipboardHolder(clipboard));
+            player.sendMessage("Schematic sent to clipboard");
         }
-        WorldEdit.getInstance().getSessionManager().get(BukkitAdapter.adapt(player))
-                .setClipboard(new ClipboardHolder(clipboard));
-        player.sendMessage("Schematic sent to clipboard");
     }
 }
