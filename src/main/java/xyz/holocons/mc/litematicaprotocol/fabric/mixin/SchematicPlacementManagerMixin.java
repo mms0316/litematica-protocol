@@ -24,8 +24,8 @@ import net.minecraft.nbt.NbtDouble;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
-import net.minecraft.util.registry.Registry;
 import xyz.holocons.mc.litematicaprotocol.Constants;
 import xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod;
 
@@ -88,7 +88,7 @@ abstract class SchematicPlacementManagerMixin {
                     ? palette.getBlockState(i)
                     : LitematicaBlockStateContainer.AIR_BLOCK_STATE;
             final var properties = blockState.getEntries().entrySet().iterator();
-            stringBuilder.append(Registry.BLOCK.getId(blockState.getBlock()));
+            stringBuilder.append(Registries.BLOCK.getId(blockState.getBlock()));
             if (properties.hasNext()) {
                 stringBuilder.append('[');
                 while (properties.hasNext()) {
