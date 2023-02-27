@@ -1,6 +1,7 @@
 package xyz.holocons.mc.litematicaprotocol.fabric.mixin;
 
 import java.io.IOException;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,6 +18,7 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.nbt.NbtByteArray;
 import net.minecraft.nbt.NbtCompound;
@@ -33,6 +35,23 @@ import xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod;
 abstract class SchematicPlacementManagerMixin {
 
     private static final int MAX_PAYLOAD_LENGTH = 32767;
+
+    public static final class BlockStateFormatter {
+
+        private final BlockState blockState;
+
+        public BlockStateFormatter(BlockState blockState) {
+            this.blockState = blockState != null ? blockState : LitematicaBlockStateContainer.AIR_BLOCK_STATE;
+        }
+
+        @Override
+        public String toString() {
+            final var propertyJoiner = new StringJoiner(",", "[", "]").setEmptyValue("");
+            blockState.getEntries().forEach((property, comparable) -> propertyJoiner
+                    .add(property.getName() + '=' + String.valueOf(comparable).toLowerCase()));
+            return Registries.BLOCK.getId(blockState.getBlock()).toString() + propertyJoiner.toString();
+        }
+    }
 
     @Inject(method = "pastePlacementToWorld", at = @At("HEAD"), cancellable = true)
     private void injectProtocol(final SchematicPlacement placement, MinecraftClient client, CallbackInfo info) {
@@ -83,23 +102,7 @@ abstract class SchematicPlacementManagerMixin {
         final var nbt = new NbtCompound();
         final var palette = schematic.getSubRegionContainer(regionName).getPalette();
         for (int i = 0; i < palette.getPaletteSize(); i++) {
-            final var stringBuilder = new StringBuilder();
-            final var blockState = palette.getBlockState(i) != null
-                    ? palette.getBlockState(i)
-                    : LitematicaBlockStateContainer.AIR_BLOCK_STATE;
-            final var properties = blockState.getEntries().entrySet().iterator();
-            stringBuilder.append(Registries.BLOCK.getId(blockState.getBlock()));
-            if (properties.hasNext()) {
-                stringBuilder.append('[');
-                while (properties.hasNext()) {
-                    final var property = properties.next();
-                    stringBuilder.append(property.getKey().getName())
-                            .append('=')
-                            .append(String.valueOf(property.getValue()).toLowerCase())
-                            .append(properties.hasNext() ? ',' : ']');
-                }
-            }
-            nbt.putInt(stringBuilder.toString(), i);
+            nbt.putInt(new BlockStateFormatter(palette.getBlockState(i)).toString(), i);
         }
         return nbt;
     }
