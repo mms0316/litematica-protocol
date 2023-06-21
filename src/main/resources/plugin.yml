@@ -2,7 +2,7 @@ main: xyz.holocons.mc.litematicaprotocol.paper.LitematicaProtocolPlugin
 name: ${name}
 version: ${version}
 description: ${description}
-api-version: ${apiVersion}
+api-version: '${apiVersion}'
 authors: [dlee13]
 website: holocons.xyz
 depend: [WorldEdit]
