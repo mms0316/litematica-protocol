@@ -2,8 +2,10 @@ package xyz.holocons.mc.litematicaprotocol.fabric.mixin;
 
 import java.io.IOException;
 import java.util.StringJoiner;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import io.netty.buffer.ByteBufInputStream;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -29,7 +31,10 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import xyz.holocons.mc.litematicaprotocol.Constants;
+import xyz.holocons.mc.litematicaprotocol.fabric.ITask;
 import xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod;
+import xyz.holocons.mc.litematicaprotocol.fabric.SendSchematicPacketTask;
+import xyz.holocons.mc.litematicaprotocol.fabric.TaskManager;
 
 @Mixin(value = SchematicPlacementManager.class, remap = false)
 abstract class SchematicPlacementManagerMixin {
@@ -170,9 +175,59 @@ abstract class SchematicPlacementManagerMixin {
         final var out = new ByteBufOutputStream(message);
         out.writeUTF(Constants.SPONGE_SCHEMATIC);
         NbtIo.writeCompressed(nbt, out);
-        if (out.writtenBytes() > MAX_PAYLOAD_LENGTH) {
-            throw new IOException("Schematic is too large");
+        int totalPayload = out.writtenBytes();
+        out.close();
+
+        if (totalPayload <= MAX_PAYLOAD_LENGTH) {
+            // Best effort - One packet is enough
+            ClientPlayNetworking.send(LitematicaProtocolMod.CHANNEL_MAIN, message);
+        } else {
+            // Need to split into several packets
+
+            // Strip header (Constants.SPONGE_SCHEMATIC)
+            final var in = new ByteBufInputStream(message);
+            in.readUTF();
+            totalPayload = in.available();
+
+            final int splitHeaderSize =
+                2 + 1 + //Constants.SPONGE_SCHEMATIC_SPLIT (2 bytes for length, 1 for 0x00-0x7F string values)
+                8 + 8 + //UUID
+                4 + 4;  //Current part and total parts
+
+            // Generate UUID.
+            // If two packets with different UUIDs from a same player arrive at the server, the more recent one will be used.
+            final var uuid = UUID.randomUUID();
+
+            final int splitPayloadMaxSize = MAX_PAYLOAD_LENGTH - splitHeaderSize;
+            final int splitLastPayloadSize = totalPayload % splitPayloadMaxSize;
+            final int splitQtty = totalPayload / splitPayloadMaxSize + (splitLastPayloadSize != 0 ? 1 : 0);
+
+            // To reduce spam and not get kicked by Paper
+            int tickOffset = TaskManager.getInstance().getTopTickOffset();
+            final int tickIncrement = 1; //TODO: configuration to set amount of ticks to wait between packets
+
+            for (int splitPart = 0; splitPart < splitQtty; splitPart++) {
+                final int bufferCapacity = splitPart < splitQtty - 1 ? MAX_PAYLOAD_LENGTH : (splitLastPayloadSize + splitHeaderSize);
+
+                final var splitMessage = new PacketByteBuf(Unpooled.buffer(bufferCapacity));
+                final var splitOut = new ByteBufOutputStream(splitMessage);
+
+                splitOut.writeUTF(Constants.SPONGE_SCHEMATIC_SPLIT);
+                splitOut.writeLong(uuid.getMostSignificantBits());
+                splitOut.writeLong(uuid.getLeastSignificantBits());
+                splitOut.writeInt(splitPart + 1); //current split
+                splitOut.writeInt(splitQtty); //total splits
+                final var payload = in.readNBytes(bufferCapacity - splitHeaderSize); //is this too memory consuming?
+                splitOut.write(payload);
+                splitOut.close();
+
+                final var task = new SendSchematicPacketTask(splitMessage, tickOffset);
+                TaskManager.getInstance().register(task);
+
+                tickOffset += tickIncrement;
+            }
+
+            in.close();
         }
-        ClientPlayNetworking.send(LitematicaProtocolMod.CHANNEL_MAIN, message);
     }
 }
