@@ -1,6 +1,6 @@
 main: xyz.holocons.mc.litematicaprotocol.paper.LitematicaProtocolPlugin
 name: ${name}
-version: ${version}
+version: '${version}'
 description: ${description}
 api-version: '${apiVersion}'
 authors: [dlee13]
