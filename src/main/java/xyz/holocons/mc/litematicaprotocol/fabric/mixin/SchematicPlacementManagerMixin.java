@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
-import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.util.EntityUtils;
@@ -18,7 +17,6 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.nbt.NbtByteArray;
 import net.minecraft.nbt.NbtCompound;
@@ -26,32 +24,15 @@ import net.minecraft.nbt.NbtDouble;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import xyz.holocons.mc.litematicaprotocol.Constants;
 import xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod;
+import xyz.holocons.mc.litematicaprotocol.fabric.SpongePalette;
 
 @Mixin(value = SchematicPlacementManager.class, remap = false)
 abstract class SchematicPlacementManagerMixin {
 
     private static final int MAX_PAYLOAD_LENGTH = 32767;
-
-    public static final class BlockStateFormatter {
-
-        private final BlockState blockState;
-
-        public BlockStateFormatter(BlockState blockState) {
-            this.blockState = blockState != null ? blockState : LitematicaBlockStateContainer.AIR_BLOCK_STATE;
-        }
-
-        @Override
-        public String toString() {
-            final var propertyJoiner = new StringJoiner(",", "[", "]").setEmptyValue("");
-            blockState.getEntries().forEach((property, comparable) -> propertyJoiner
-                    .add(property.getName() + '=' + String.valueOf(comparable).toLowerCase()));
-            return Registries.BLOCK.getId(blockState.getBlock()).toString() + propertyJoiner.toString();
-        }
-    }
 
     @Inject(method = "pastePlacementToWorld", at = @At("HEAD"), cancellable = true)
     private void injectProtocol(final SchematicPlacement placement, MinecraftClient client, CallbackInfo info) {
@@ -85,8 +66,10 @@ abstract class SchematicPlacementManagerMixin {
         nbt.putShort("Width", (short) Math.abs(size.getX()));
         nbt.putShort("Height", (short) Math.abs(size.getY()));
         nbt.putShort("Length", (short) Math.abs(size.getZ()));
-        nbt.put("Palette", getPalette(schematic, regionName));
-        nbt.put("BlockData", getBlockData(schematic, regionName));
+        final var litematicaPalette = schematic.getSubRegionContainer(regionName).getPalette();
+        final var spongePalette = new SpongePalette(litematicaPalette);
+        nbt.put("Palette", getPalette(schematic, regionName, spongePalette));
+        nbt.put("BlockData", getBlockData(schematic, regionName, spongePalette));
         final var blockEntities = getBlockEntities(schematic, regionName);
         if (!blockEntities.isEmpty()) {
             nbt.put("BlockEntities", blockEntities);
@@ -98,22 +81,21 @@ abstract class SchematicPlacementManagerMixin {
         return nbt;
     }
 
-    private static NbtCompound getPalette(final LitematicaSchematic schematic, final String regionName) {
+    private static NbtCompound getPalette(final LitematicaSchematic schematic, final String regionName, final SpongePalette spongePalette) {
         final var nbt = new NbtCompound();
-        final var palette = schematic.getSubRegionContainer(regionName).getPalette();
-        for (int i = 0; i < palette.getPaletteSize(); i++) {
-            nbt.putInt(new BlockStateFormatter(palette.getBlockState(i)).toString(), i);
+        for (int i = 0; i < spongePalette.getPaletteSize(); i++) {
+            nbt.putInt(spongePalette.getId(i), i);
         }
         return nbt;
     }
 
-    private static NbtByteArray getBlockData(final LitematicaSchematic schematic, final String regionName) {
+    private static NbtByteArray getBlockData(final LitematicaSchematic schematic, final String regionName, final SpongePalette spongePalette) {
         final var blockData = new PacketByteBuf(Unpooled.buffer());
         final var blockStateContainer = schematic.getSubRegionContainer(regionName);
         for (int y = 0; y < Math.abs(blockStateContainer.getSize().getY()); y++) {
             for (int z = 0; z < Math.abs(blockStateContainer.getSize().getZ()); z++) {
                 for (int x = 0; x < Math.abs(blockStateContainer.getSize().getX()); x++) {
-                    blockData.writeVarInt(blockStateContainer.getPalette().idFor(blockStateContainer.get(x, y, z)));
+                    blockData.writeVarInt(spongePalette.idFor(blockStateContainer.get(x, y, z)));
                 }
             }
         }
