@@ -3,6 +3,7 @@ package xyz.holocons.mc.litematicaprotocol.paper;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.UUID;
 
 import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
@@ -40,13 +41,32 @@ public final class LitematicaProtocolPlugin extends JavaPlugin implements Plugin
         final Clipboard clipboard;
         try (final var in = new DataInputStream(new ByteArrayInputStream(message))) {
             final var type = in.readUTF();
-            clipboard = switch (type) {
-                case Constants.SPONGE_SCHEMATIC ->
-                    player.getGameMode() == GameMode.CREATIVE && player.hasPermission("worldedit.clipboard.protocol")
-                            ? BuiltInClipboardFormat.SPONGE_SCHEMATIC.getReader(in).read()
-                            : null;
-                default -> throw new IOException("Unrecognized message type");
-            };
+
+            if (player.getGameMode() == GameMode.CREATIVE && player.hasPermission("worldedit.clipboard.protocol")) {
+                switch (type) {
+                    case Constants.SPONGE_SCHEMATIC ->
+                        clipboard = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getReader(in).read();
+                    case Constants.SPONGE_SCHEMATIC_SPLIT -> {
+                        final var uuidMostSignificant = in.readLong();
+                        final var uuidLeastSignificant = in.readLong();
+                        final UUID uuid = new UUID(uuidMostSignificant, uuidLeastSignificant);
+                        final var currentSplit = in.readInt();
+                        final var totalSplits = in.readInt();
+
+                        player.sendMessage(String.format("Loading schematic %d/%d", currentSplit, totalSplits));
+
+                        clipboard = SpongeSchematicSplit.getInstance().push(in, player, uuid, currentSplit, totalSplits);
+                        if (clipboard == null) {
+                            //not ready yet
+                            return;
+                        }
+                    }
+                    default -> throw new IOException("Unrecognized message type");
+                }
+            }
+            else {
+                clipboard = null;
+            }
         } catch (Exception e) {
             getLogger().warning(e.getMessage());
             player.sendMessage("Failed to read schematic");
