@@ -37,7 +37,7 @@ public class Schematic {
         if (nbt.isEmpty()) {
             throw new IOException("No schematic is selected");
         }
-        final var data = new PacketByteBuf(Unpooled.buffer(4096));
+        final var data = new PacketByteBuf(Unpooled.buffer(8192));
         try (final var out = new ByteBufOutputStream(data)) {
             NbtIo.writeCompressed(nbt, out);
         }
@@ -82,9 +82,9 @@ public class Schematic {
             blockStates.defaultReturnValue(-1);
             for (int i = 0; i < palette.getPaletteSize(); i++) {
                 final var state = palette.getBlockState(i);
-                if (!this.blockStates.containsKey(state)) {
-                    final var id = this.blockStates.size();
-                    this.blockStates.put(state, id);
+                if (!blockStates.containsKey(state)) {
+                    final var id = blockStates.size();
+                    blockStates.put(state, id);
                 }
             }
         }
@@ -104,15 +104,20 @@ public class Schematic {
         }
 
         public NbtByteArray getBlockData() {
-            final var data = new PacketByteBuf(Unpooled.buffer());
-            for (int y = 0; y < Math.abs(blocks.getSize().getY()); y++) {
-                for (int z = 0; z < Math.abs(blocks.getSize().getZ()); z++) {
-                    for (int x = 0; x < Math.abs(blocks.getSize().getX()); x++) {
+            final var sizeX = blocks.getSize().getX();
+            final var sizeY = blocks.getSize().getY();
+            final var sizeZ = blocks.getSize().getZ();
+            final var maxVarIntLength = PacketByteBuf.getVarIntLength(blockStates.size() - 1);
+            final var bufferSize = sizeX * sizeY * sizeZ * maxVarIntLength;
+            final var data = new PacketByteBuf(Unpooled.buffer(bufferSize, bufferSize));
+            for (int y = 0; y < sizeY; y++) {
+                for (int z = 0; z < sizeZ; z++) {
+                    for (int x = 0; x < sizeX; x++) {
                         data.writeVarInt(blockStates.getInt(blocks.get(x, y, z)));
                     }
                 }
             }
-            return new NbtByteArray(data.array());
+            return new NbtByteArray(data.getWrittenBytes());
         }
     }
 

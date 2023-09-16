@@ -12,7 +12,7 @@ import xyz.holocons.mc.litematicaprotocol.Constants;
 
 public class TaskSendSchematic extends TaskBase {
 
-    private static final int MAX_PAYLOAD_LENGTH = 32767;
+    private static final int MAX_PAYLOAD_SIZE = 32767;
 
     private final Schematic schematic;
 
@@ -34,10 +34,10 @@ public class TaskSendSchematic extends TaskBase {
     }
 
     private static void sendPacket(final PacketByteBuf payload) throws IOException {
-        final var message = new PacketByteBuf(Unpooled.buffer(4096));
+        final var message = new PacketByteBuf(Unpooled.buffer(MAX_PAYLOAD_SIZE, MAX_PAYLOAD_SIZE));
         try (final var out = new ByteBufOutputStream(message)) {
             out.writeUTF(Constants.SPONGE_SCHEMATIC);
-            if (out.writtenBytes() + payload.readableBytes() > MAX_PAYLOAD_LENGTH) {
+            if (out.writtenBytes() + payload.readableBytes() > MAX_PAYLOAD_SIZE) {
                 throw new IOException("Schematic is too large");
             }
             out.write(payload.getWrittenBytes());
