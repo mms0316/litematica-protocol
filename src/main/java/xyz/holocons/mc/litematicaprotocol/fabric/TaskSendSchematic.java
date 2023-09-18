@@ -14,9 +14,9 @@ public class TaskSendSchematic extends TaskBase {
 
     private static final int MAX_PAYLOAD_SIZE = 32767;
 
-    private final Schematic schematic;
+    private final ClientSchematic schematic;
 
-    public TaskSendSchematic(final Schematic schematic) {
+    public TaskSendSchematic(final ClientSchematic schematic) {
         this.finished = false;
         this.schematic = schematic;
     }
@@ -24,24 +24,26 @@ public class TaskSendSchematic extends TaskBase {
     @Override
     public boolean execute() {
         try {
-            final var payload = schematic.getPayload();
-            sendPacket(payload);
+            this.finished = sendPacket(schematic);
         } catch (IOException e) {
-            this.mc.inGameHud.getChatHud().addMessage(Text.of(e.getMessage()));
+            mc.inGameHud.getChatHud().addMessage(Text.of(e.getMessage()));
+            this.finished = true;
         }
-        this.finished = true;
-        return this.finished;
+        return finished;
     }
 
-    private static void sendPacket(final PacketByteBuf payload) throws IOException {
+    private static boolean sendPacket(final ClientSchematic schematic) throws IOException {
+        final var data = schematic.getData();
+        if (data.readableBytes() > Constants.MAX_SCHEMATIC_SIZE) {
+            throw new IOException("Schematic is too large");
+        }
         final var message = new PacketByteBuf(Unpooled.buffer(MAX_PAYLOAD_SIZE, MAX_PAYLOAD_SIZE));
         try (final var out = new ByteBufOutputStream(message)) {
-            out.writeUTF(Constants.SPONGE_SCHEMATIC);
-            if (out.writtenBytes() + payload.readableBytes() > MAX_PAYLOAD_SIZE) {
-                throw new IOException("Schematic is too large");
-            }
-            out.write(payload.getWrittenBytes());
+            out.writeUTF(Constants.SPONGE_V2_SCHEMATIC_PART);
+            out.writeInt(data.readableBytes());
+            data.readBytes(out, Math.min(data.readableBytes(), MAX_PAYLOAD_SIZE - out.writtenBytes()));
         }
         ClientPlayNetworking.send(LitematicaProtocolMod.CHANNEL_MAIN, message);
+        return data.readableBytes() == 0;
     }
 }

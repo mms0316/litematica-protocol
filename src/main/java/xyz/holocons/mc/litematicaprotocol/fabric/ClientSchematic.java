@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import fi.dy.masa.litematica.schematic.LitematicaSchematic;
 import fi.dy.masa.litematica.schematic.container.LitematicaBlockStateContainer;
 import fi.dy.masa.litematica.schematic.placement.SchematicPlacement;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
@@ -20,32 +21,36 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
 
-public class Schematic {
+public class ClientSchematic {
 
     private final LitematicaSchematic schematic;
     private final String regionName;
+    private ByteBuf data;
 
-    public Schematic(final SchematicPlacement placement) {
+    public ClientSchematic(final SchematicPlacement placement) {
         this.schematic = placement.getSchematic();
         this.regionName = placement.getSubRegionCount() == 1
                 ? placement.getAllSubRegionsPlacements().iterator().next().getName()
                 : placement.getSelectedSubRegionName();
+        this.data = Unpooled.buffer(8192);
     }
 
-    public PacketByteBuf getPayload() throws IOException {
-        final var nbt = toNbtCompound(schematic, regionName);
-        if (nbt.isEmpty()) {
-            throw new IOException("No schematic is selected");
-        }
-        final var data = new PacketByteBuf(Unpooled.buffer(8192));
-        try (final var out = new ByteBufOutputStream(data)) {
-            NbtIo.writeCompressed(nbt, out);
+    public ByteBuf getData() throws IOException {
+        if (!data.isReadOnly()) {
+            final var nbt = createNbtCompound(schematic, regionName);
+            if (nbt.isEmpty()) {
+                throw new IOException("No schematic is selected");
+            }
+            try (final var out = new ByteBufOutputStream(data)) {
+                NbtIo.writeCompressed(nbt, out);
+            }
+            this.data = data.asReadOnly();
         }
         return data;
     }
 
     // https://github.com/SpongePowered/Schematic-Specification/blob/master/versions/schematic-2.md
-    private static NbtCompound toNbtCompound(final LitematicaSchematic schematic, final String regionName) {
+    private static NbtCompound createNbtCompound(final LitematicaSchematic schematic, final String regionName) {
         final var nbt = new NbtCompound();
         if (schematic == null || regionName == null || schematic.getSubRegionContainer(regionName) == null) {
             return nbt;

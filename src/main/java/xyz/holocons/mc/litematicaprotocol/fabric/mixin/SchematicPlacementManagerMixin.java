@@ -11,7 +11,7 @@ import fi.dy.masa.litematica.schematic.placement.SchematicPlacementManager;
 import fi.dy.masa.litematica.util.EntityUtils;
 import net.minecraft.client.MinecraftClient;
 import xyz.holocons.mc.litematicaprotocol.fabric.LitematicaProtocolMod;
-import xyz.holocons.mc.litematicaprotocol.fabric.Schematic;
+import xyz.holocons.mc.litematicaprotocol.fabric.ClientSchematic;
 import xyz.holocons.mc.litematicaprotocol.fabric.TaskSendSchematic;
 
 @Mixin(value = SchematicPlacementManager.class, remap = false)
@@ -23,11 +23,13 @@ abstract class SchematicPlacementManagerMixin {
             return;
         }
         info.cancel();
-        if (client.player == null || !EntityUtils.isCreativeMode(client.player) || placement == null) {
+        final var scheduler = TaskScheduler.getInstanceClient();
+        if (client.player == null || !EntityUtils.isCreativeMode(client.player) || placement == null
+                || scheduler.hasTask(TaskSendSchematic.class)) {
             return;
         }
-        final var schematic = new Schematic(placement);
+        final var schematic = new ClientSchematic(placement);
         final var task = new TaskSendSchematic(schematic);
-        TaskScheduler.getInstanceClient().scheduleTask(task, 1);
+        scheduler.scheduleTask(task, 1);
     }
 }
