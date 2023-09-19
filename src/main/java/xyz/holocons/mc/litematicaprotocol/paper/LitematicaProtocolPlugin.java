@@ -48,7 +48,7 @@ public final class LitematicaProtocolPlugin extends JavaPlugin implements Plugin
     }
 
     private static void receiveSchematicPart(final Player player, final DataInputStream in) throws IOException {
-        final var clipboard = hasClipboardPermission(player) ? ServerSchematic.getClipboard(player, in) : null;
+        final var clipboard = hasSchematicPermission(player) ? ServerSchematic.getClipboard(player, in) : null;
         if (clipboard != null) {
             WorldEdit.getInstance().getSessionManager().get(BukkitAdapter.adapt(player))
                     .setClipboard(new ClipboardHolder(clipboard));
@@ -56,7 +56,7 @@ public final class LitematicaProtocolPlugin extends JavaPlugin implements Plugin
         }
     }
 
-    private static boolean hasClipboardPermission(final Player player) {
-        return player.getGameMode() == GameMode.CREATIVE && player.hasPermission("worldedit.clipboard.protocol");
+    private static boolean hasSchematicPermission(final Player player) {
+        return player.getGameMode() == GameMode.CREATIVE && player.hasPermission("worldedit.schematic.protocol");
     }
 }

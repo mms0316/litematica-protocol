@@ -8,5 +8,5 @@ website: holocons.xyz
 depend: [WorldEdit]
 prefix: LitematicaProtocol
 permissions:
-  worldedit.clipboard.protocol:
+  worldedit.schematic.protocol:
     default: op
