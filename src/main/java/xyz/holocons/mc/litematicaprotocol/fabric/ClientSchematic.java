@@ -19,6 +19,7 @@ import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.encoding.VarInts;
 import net.minecraft.registry.Registries;
 
 public class ClientSchematic {
@@ -173,7 +174,7 @@ public class ClientSchematic {
             final var sizeX = container.getSize().getX();
             final var sizeY = container.getSize().getY();
             final var sizeZ = container.getSize().getZ();
-            final var maxVarIntLength = PacketByteBuf.getVarIntLength(palette.size() - 1);
+            final var maxVarIntLength = VarInts.getSizeInBytes(palette.size() - 1);
             final var bufferSize = sizeX * sizeY * sizeZ * maxVarIntLength;
             this.data = new PacketByteBuf(Unpooled.buffer(bufferSize, bufferSize));
             for (int y = 0; y < sizeY; y++) {
