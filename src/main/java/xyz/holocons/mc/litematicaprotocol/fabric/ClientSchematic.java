@@ -18,7 +18,6 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtType;
 import net.minecraft.nbt.scanner.NbtScanner;
 import net.minecraft.nbt.visitor.NbtElementVisitor;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.encoding.VarInts;
 import net.minecraft.registry.Registries;
 
@@ -168,7 +167,7 @@ public class ClientSchematic {
 
     private static final class BlockData implements NbtSchematicElement {
 
-        private final PacketByteBuf data;
+        private final ByteBuf data;
 
         public BlockData(final Palette palette, final LitematicaBlockStateContainer container) {
             final var sizeX = container.getSize().getX();
@@ -176,11 +175,11 @@ public class ClientSchematic {
             final var sizeZ = container.getSize().getZ();
             final var maxVarIntLength = VarInts.getSizeInBytes(palette.size() - 1);
             final var bufferSize = sizeX * sizeY * sizeZ * maxVarIntLength;
-            this.data = new PacketByteBuf(Unpooled.buffer(bufferSize, bufferSize));
+            this.data = Unpooled.buffer(bufferSize, bufferSize);
             for (int y = 0; y < sizeY; y++) {
                 for (int z = 0; z < sizeZ; z++) {
                     for (int x = 0; x < sizeX; x++) {
-                        data.writeVarInt(palette.getId(container.get(x, y, z)));
+                        VarInts.write(data, palette.getId(container.get(x, y, z)));
                     }
                 }
             }
