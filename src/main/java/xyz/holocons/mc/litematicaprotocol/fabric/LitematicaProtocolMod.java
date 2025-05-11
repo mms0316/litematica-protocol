@@ -6,6 +6,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.C2SPlayChannelEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.util.Identifier;
@@ -13,7 +14,7 @@ import xyz.holocons.mc.litematicaprotocol.Constants;
 
 public final class LitematicaProtocolMod implements ClientModInitializer {
 
-    public static final Identifier CHANNEL_MAIN = new Identifier(Constants.NAMESPACE, Constants.MAIN);
+    public static final Identifier CHANNEL_MAIN = Identifier.of(Constants.NAMESPACE, Constants.MAIN);
 
     private static boolean isProtocolAvailable = false;
 
@@ -21,6 +22,7 @@ public final class LitematicaProtocolMod implements ClientModInitializer {
     public void onInitializeClient() {
         ClientPlayConnectionEvents.JOIN.register(this::onPlayReady);
         C2SPlayChannelEvents.REGISTER.register(this::onChannelRegister);
+        PayloadTypeRegistry.playC2S().register(ClientSchematicPayload.PACKET_ID, ClientSchematicPayload.PACKET_CODEC);
     }
 
     public static boolean isProtocolAvailable() {

@@ -62,7 +62,7 @@ public class ServerSchematic {
     private static Clipboard createClipboard(final ServerSchematic schematic) throws IOException {
         final Clipboard clipboard;
         try (final var in = new ByteArrayInputStream(schematic.data)) {
-            clipboard = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getReader(in).read();
+            clipboard = BuiltInClipboardFormat.SPONGE_V2_SCHEMATIC.getReader(in).read();
         }
         return clipboard;
     }

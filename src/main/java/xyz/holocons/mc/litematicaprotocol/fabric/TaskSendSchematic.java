@@ -43,7 +43,7 @@ public class TaskSendSchematic extends TaskBase {
             out.writeInt(data.readableBytes());
             data.readBytes(out, Math.min(data.readableBytes(), MAX_PAYLOAD_SIZE - out.writtenBytes()));
         }
-        ClientPlayNetworking.send(LitematicaProtocolMod.CHANNEL_MAIN, message);
+        ClientPlayNetworking.send(new ClientSchematicPayload(message));
         return data.readableBytes() == 0;
     }
 }
